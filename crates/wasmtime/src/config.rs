@@ -105,6 +105,7 @@ pub struct Config {
     pub(crate) parallel_compilation: bool,
     pub(crate) paged_memory_initialization: bool,
     pub(crate) memfd: bool,
+    pub(crate) mlock_module_mmaps: bool,
 }
 
 impl Config {
@@ -131,6 +132,7 @@ impl Config {
             // Default to paged memory initialization when using uffd on linux
             paged_memory_initialization: cfg!(all(target_os = "linux", feature = "uffd")),
             memfd: false,
+            mlock_module_mmaps: false,
         };
         #[cfg(compiler)]
         {
@@ -1199,6 +1201,12 @@ impl Config {
         self
     }
 
+    /// XXX experiment
+    pub fn mlock_module_mmaps(&mut self, mlock_module_mmaps: bool) -> &mut Self {
+        self.mlock_module_mmaps = mlock_module_mmaps;
+        self
+    }
+
     pub(crate) fn build_allocator(&self) -> Result<Box<dyn InstanceAllocator>> {
         #[cfg(feature = "async")]
         let stack_size = self.async_stack_size;
@@ -1269,6 +1277,7 @@ impl Clone for Config {
             parallel_compilation: self.parallel_compilation,
             paged_memory_initialization: self.paged_memory_initialization,
             memfd: self.memfd,
+            mlock_module_mmaps: self.mlock_module_mmaps,
         }
     }
 }
@@ -1301,7 +1310,13 @@ impl fmt::Debug for Config {
                 "guard_before_linear_memory",
                 &self.tunables.guard_before_linear_memory,
             )
-            .field("parallel_compilation", &self.parallel_compilation);
+            .field("parallel_compilation", &self.parallel_compilation)
+            .field(
+                "paged_memory_initialization",
+                &self.paged_memory_initialization,
+            )
+            .field("memfd", &self.memfd)
+            .field("mlock_module_mmaps", &self.mlock_module_mmaps);
         #[cfg(compiler)]
         {
             f.field("compiler", &self.compiler);
